@@ -6,57 +6,172 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: transparent; /* Changed to transparent so Canvas is visible */
+  background: transparent;
+  overflow: hidden;
 }
 
-.content-wrapper {
-  z-index: 10;
+.video-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  filter: brightness(0.6) contrast(1.2);
+}
+
+.intro-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: black;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 1s ease-in-out;
+}
+
+.overlay-center {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
-  width: 90%;
-  max-width: 900px;
-  gap: 4rem;
-  pointer-events: none; /* Let pointer events pass through to canvas */
+  z-index: 20;
 }
 
-.content-wrapper > * {
-  pointer-events: auto; /* UI elements can still be interacted with if needed */
+.futuristic-panel {
+  background: rgba(10, 10, 12, 0.85);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 0, 68, 0.5);
+  border-radius: 12px;
+  box-shadow: 0 0 30px rgba(255, 0, 68, 0.2), inset 0 0 20px rgba(0, 255, 255, 0.1);
+  padding: 3rem;
+  max-width: 600px;
+  text-align: center;
 }
 
-.header-panel {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  padding: 1.5rem 3rem;
-  background: rgba(10, 10, 12, 0.7); /* Slightly more transparent */
-  backdrop-filter: blur(4px);
-}
-
-.header-panel h1 {
+.futuristic-panel h1 {
   font-family: var(--comic-font);
-  font-size: 3rem;
+  font-size: 4.5rem;
+  color: white;
+  text-shadow: 3px 3px 0 var(--neon-cyan), -3px -3px 0 var(--neon-magenta);
+  margin-bottom: 2rem;
   letter-spacing: 2px;
-  color: var(--neon-yellow);
-  text-shadow: 2px 2px 0 #000, 5px 5px 0 var(--neon-magenta);
+}
+
+.instructions-card {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  padding: 1.5rem;
+  margin-bottom: 2.5rem;
+  text-align: left;
+}
+
+.instructions-card h3 {
+  color: var(--neon-cyan);
+  font-family: var(--comic-font);
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.instructions-card ul {
+  list-style: none;
+  padding: 0;
   margin: 0;
 }
 
-.score-display {
-  font-family: var(--comic-font);
-  font-size: 2.5rem;
-  color: var(--neon-cyan);
-  text-shadow: 3px 3px 0 #000;
+.instructions-card li {
+  color: #ddd;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.1rem;
+  margin-bottom: 0.8rem;
+  line-height: 1.4;
 }
 
-.main-display {
-  flex-grow: 1;
+.key-hint {
+  color: #fff;
+  font-weight: bold;
+  background: var(--neon-magenta);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+  text-shadow: none;
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.play-button {
+  background: transparent;
+  border: 3px solid var(--neon-cyan);
+  padding: 1rem 3rem;
+  cursor: pointer;
+  box-shadow: 6px 6px 0 var(--neon-magenta);
+  transition: all 0.2s;
+  font-family: var(--comic-font);
+  font-size: 2.5rem;
+  color: white;
+  text-shadow: 2px 2px 0 var(--neon-cyan);
+  text-transform: uppercase;
+}
+
+.play-button:hover {
+  transform: translate(-4px, -4px);
+  box-shadow: 10px 10px 0 var(--neon-cyan);
+  background: rgba(0, 255, 255, 0.1);
+}
+
+.game-over-ui h2 {
+  color: white;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.retry-hints {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 250px;
-  text-align: center;
+  gap: 1rem;
+}
+
+.small-hint {
+  color: #888;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.bottom-right-loader {
+  position: absolute;
+  bottom: 30px;
+  right: 40px;
+  width: 250px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.loading-text {
+  font-family: var(--comic-font);
+  font-size: 1.5rem;
+  color: white;
+  text-shadow: 2px 2px 0 var(--neon-magenta);
+  text-align: right;
+  letter-spacing: 1px;
 }
 
 .halftone-overlay {
@@ -71,7 +186,7 @@
   background-position: 0 0, 12px 12px;
   opacity: 0.15;
   mix-blend-mode: screen;
-  z-index: 5; /* Between canvas (1) and UI (10) */
+  z-index: 5; 
   pointer-events: none;
   animation: halftoneShift 10s linear infinite;
 }

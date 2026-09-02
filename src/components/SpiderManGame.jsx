@@ -1,7 +1,24 @@
 import React, { useRef, useEffect } from 'react';
 
-const SpiderManGame = ({ setScore }) => {
+const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
   const canvasRef = useRef(null);
+  
+  // Refs to hold mutable latest props without causing re-renders
+  const gameStateRef = useRef(gameState);
+  const setScoreRef = useRef(setScore);
+  const onGameOverRef = useRef(onGameOver);
+
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
+  useEffect(() => {
+    setScoreRef.current = setScore;
+  }, [setScore]);
+
+  useEffect(() => {
+    onGameOverRef.current = onGameOver;
+  }, [onGameOver]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -15,18 +32,20 @@ const SpiderManGame = ({ setScore }) => {
     window.addEventListener('resize', resize);
     resize();
 
-    // Game state
+    // Game variables
     const gravity = 0.4;
     const maxVelocity = 35;
 
     let spidey = {
       x: canvas.width / 4,
       y: canvas.height / 3,
-      vx: 15, // Start moving right
+      vx: 15,
       vy: 0,
-      width: 100, // Adjusted size
+      width: 100,
       height: 100,
-      state: 'falling', // 'falling' or 'swinging'
+      state: 'falling',
+      flip: false,
+      rotation: 0
     };
 
     let web = {
@@ -35,14 +54,17 @@ const SpiderManGame = ({ setScore }) => {
       anchorY: 0,
       length: 0,
       angle: 0,
-      angularVelocity: 0
+      angularVelocity: 0,
+      visualThickness: 0,
+      wobble: 0
     };
 
     let buildings = [];
     let particles = [];
+    let entities = [];
     let distanceTraveled = 0;
+    let gameTime = 0;
     
-    // Load Spider-Man image downloaded via curl
     const spideyImg = new Image();
     spideyImg.src = '/spiderman.png'; 
 
@@ -58,40 +80,55 @@ const SpiderManGame = ({ setScore }) => {
       buildings.push(createBuilding(canvas.width));
     }
 
-    const spawnParticle = (x, y, color, isSpeedLine = false) => {
+    const spawnParticle = (x, y, color, isSpeedLine = false, customVx = null, customVy = null) => {
       particles.push({
         x, y,
-        vx: isSpeedLine ? -Math.abs(spidey.vx) * 2 - 5 : (Math.random() - 0.5) * 6,
-        vy: isSpeedLine ? 0 : (Math.random() - 0.5) * 6,
+        vx: isSpeedLine ? -Math.abs(spidey.vx) * 2 - 5 : (customVx !== null ? customVx : (Math.random() - 0.5) * 6),
+        vy: isSpeedLine ? 0 : (customVy !== null ? customVy : (Math.random() - 0.5) * 6),
         life: 1,
         color,
         isSpeedLine
       });
     };
 
+    const spawnEntity = (xOffset) => {
+      const isObstacle = Math.random() > 0.4;
+      entities.push({
+        id: Math.random(),
+        type: isObstacle ? 'drone' : 'token',
+        x: xOffset + Math.random() * 500,
+        y: Math.random() * (canvas.height - 200) + 50,
+        radius: isObstacle ? 25 : 15,
+        rotation: 0
+      });
+    };
+
+    for(let i=1; i<5; i++) {
+      spawnEntity(canvas.width + i*400);
+    }
+
     const attachWeb = (e) => {
+      if (gameStateRef.current !== 'PLAYING') return;
+
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX ? e.clientX - rect.left : e.touches[0].clientX - rect.left;
       const mouseY = e.clientY ? e.clientY - rect.top : e.touches[0].clientY - rect.top;
 
       web.active = true;
       web.anchorX = mouseX;
-      web.anchorY = Math.min(mouseY, canvas.height * 0.3); // Anchor to top skyline
+      web.anchorY = Math.min(mouseY, canvas.height * 0.3);
       
       const dx = spidey.x - web.anchorX;
       const dy = spidey.y - web.anchorY;
       web.length = Math.sqrt(dx * dx + dy * dy);
-      
-      // Prevent 0 length
       if (web.length === 0) web.length = 1;
       
       web.angle = Math.atan2(dx, dy);
-      
-      // V = r * omega -> omega = V / r
-      // Resolving linear velocity to angular
       web.angularVelocity = (spidey.vx * Math.cos(web.angle) - spidey.vy * Math.sin(web.angle)) / web.length;
       
       spidey.state = 'swinging';
+      web.visualThickness = 8;
+      web.wobble = 15;
 
       for (let i = 0; i < 15; i++) {
         spawnParticle(web.anchorX, web.anchorY, '#ffffff');
@@ -99,12 +136,10 @@ const SpiderManGame = ({ setScore }) => {
     };
 
     const detachWeb = () => {
-      if (web.active) {
+      if (web.active && gameStateRef.current === 'PLAYING') {
         web.active = false;
         spidey.state = 'falling';
-        
-        // Boost momentum on release for fun game feel
-        const momentumBoost = 1.2;
+        const momentumBoost = 1.3;
         spidey.vx = web.length * web.angularVelocity * Math.cos(web.angle) * momentumBoost;
         spidey.vy = -web.length * web.angularVelocity * Math.sin(web.angle) * momentumBoost;
       }
@@ -118,75 +153,119 @@ const SpiderManGame = ({ setScore }) => {
     canvas.addEventListener('touchstart', (e) => { handleDown(e); e.preventDefault(); }, {passive: false});
     canvas.addEventListener('touchend', (e) => { handleUp(); e.preventDefault(); }, {passive: false});
 
+    const triggerGlitch = () => {
+      document.querySelector('.app-container')?.classList.add('severe-glitch');
+      setTimeout(() => {
+          document.querySelector('.app-container')?.classList.remove('severe-glitch');
+      }, 300);
+    };
+
+    const resetGame = () => {
+      spidey.y = 100;
+      spidey.vy = 5;
+      spidey.vx = 15;
+      web.active = false;
+      spidey.state = 'falling';
+    };
+
     const update = () => {
-      const targetX = canvas.width * 0.3; // Spidey stays at 30% of screen width
+      // If we just revived, reset position
+      if (gameStateRef.current === 'PLAYING' && spidey.y > canvas.height) {
+         resetGame();
+      }
+
+      if (gameStateRef.current !== 'PLAYING') return; // Pause updates if not playing
+
+      gameTime += 0.05;
+      const targetX = canvas.width * 0.3;
       let xShift = 0;
 
       if (spidey.state === 'swinging') {
         let angularAcceleration = (-gravity / web.length) * Math.sin(web.angle);
         web.angularVelocity += angularAcceleration;
         web.angle += web.angularVelocity;
-        
-        web.angularVelocity *= 0.999; // Less dampening = wilder swings!
+        web.angularVelocity *= 0.999; 
 
         const nextX = web.anchorX + web.length * Math.sin(web.angle);
         const nextY = web.anchorY + web.length * Math.cos(web.angle);
         
         spidey.vx = nextX - spidey.x;
         spidey.vy = nextY - spidey.y;
-
         spidey.x = nextX;
         spidey.y = nextY;
+        
+        web.visualThickness += (2 - web.visualThickness) * 0.1;
+        web.wobble *= 0.8;
+        spidey.rotation = -web.angle + Math.PI/2;
       } else {
         spidey.vy += gravity;
         spidey.x += spidey.vx;
         spidey.y += spidey.vy;
         spidey.vx *= 0.995;
+        spidey.rotation += (spidey.vx > 0 ? 0.2 : -0.2); // Spin while falling
       }
 
-      // Terminal velocity
       spidey.vx = Math.max(Math.min(spidey.vx, maxVelocity), -maxVelocity);
       spidey.vy = Math.max(Math.min(spidey.vy, maxVelocity), -maxVelocity);
 
-      // Scroll world to keep spidey at targetX
+      if (spidey.vx > 0) spidey.flip = false;
+      else if (spidey.vx < -2) spidey.flip = true;
+
       xShift = spidey.x - targetX;
       spidey.x = targetX; 
+      if (web.active) web.anchorX -= xShift;
 
-      if (web.active) {
-        web.anchorX -= xShift;
-      }
-
-      // Floor bounce & penalty
-      if (spidey.y > canvas.height + 200) {
-         spidey.y = 100;
-         spidey.vy = 5;
-         spidey.vx = 15; // Give speed to keep playing
-         setScore(prev => Math.max(0, prev - 50)); 
-         // Glitch effect on floor hit
-         document.querySelector('.app-container').classList.add('severe-glitch');
-         setTimeout(() => {
-             const app = document.querySelector('.app-container');
-             if(app) app.classList.remove('severe-glitch');
-         }, 300);
+      // Death condition
+      if (spidey.y > canvas.height + 150) {
+         triggerGlitch();
+         setScoreRef.current(prev => Math.max(0, prev - 100));
+         if(onGameOverRef.current) onGameOverRef.current();
       }
 
       distanceTraveled += xShift > 0 ? xShift : 0;
-      
       if (Math.floor(distanceTraveled) % 150 < Math.abs(xShift) && xShift > 0) {
-        setScore(prev => prev + 10);
+        setScoreRef.current(prev => prev + 10);
       }
 
-      // Parallax Buildings
-      buildings.forEach(b => {
-        b.x -= xShift * 0.8; // Slower scroll for parallax depth
-      });
-
+      buildings.forEach(b => b.x -= xShift * 0.8);
       buildings = buildings.filter(b => b.x + b.width > -500);
       while (buildings.length < 20) {
         buildings.push(createBuilding());
       }
 
-      // Particles
+      let spawnedThisFrame = false;
+      entities.forEach((ent, idx) => {
+        ent.x -= xShift;
+        ent.rotation += 0.05;
+        
+        if (ent.type === 'token') {
+           ent.y += Math.sin(Date.now() / 200 + ent.id) * 1.5;
+        }
+
+        const dist = Math.hypot(ent.x - spidey.x, ent.y - spidey.y);
+        if (dist < spidey.width/3 + ent.radius) {
+           if (ent.type === 'drone') {
+              spidey.vx = -10;
+              spidey.vy = -10;
+              if (web.active) detachWeb();
+              setScoreRef.current(prev => Math.max(0, prev - 100));
+              triggerGlitch();
+              for(let i=0; i<20; i++) spawnParticle(ent.x, ent.y, '#ff00ff');
+           } else if (ent.type === 'token') {
+              setScoreRef.current(prev => prev + 150);
+              spidey.vx += 5; 
+              for(let i=0; i<15; i++) spawnParticle(ent.x, ent.y, '#ffff00');
+           }
+           entities.splice(idx, 1);
+        }
+      });
+      
+      entities = entities.filter(ent => ent.x > -100);
+      while(entities.length < 5 && !spawnedThisFrame) {
+         spawnEntity(canvas.width + 200);
+         spawnedThisFrame = true;
+      }
+
       particles.forEach(p => {
         p.x -= xShift;
         p.x += p.vx;
@@ -195,8 +274,7 @@ const SpiderManGame = ({ setScore }) => {
       });
       particles = particles.filter(p => p.life > 0);
       
-      // Generate speed lines
-      if (Math.abs(spidey.vx) > 15 && Math.random() > 0.4) {
+      if (Math.abs(spidey.vx) > 20 && Math.random() > 0.3) {
         spawnParticle(canvas.width + Math.random()*200, Math.random() * canvas.height, '#ffffff', true);
       }
     };
@@ -221,25 +299,138 @@ const SpiderManGame = ({ setScore }) => {
       });
       ctx.globalAlpha = 1.0;
 
+      entities.forEach(ent => {
+         ctx.save();
+         ctx.translate(ent.x, ent.y);
+         ctx.rotate(ent.rotation);
+         
+         if (ent.type === 'drone') {
+            ctx.shadowColor = '#ff0000';
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = '#111';
+            ctx.fillRect(-ent.radius, -ent.radius, ent.radius*2, ent.radius*2);
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-ent.radius, -ent.radius, ent.radius*2, ent.radius*2);
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(-ent.radius*1.5, -3, ent.radius*3, 6);
+            ctx.fillRect(-3, -ent.radius*1.5, 6, ent.radius*3);
+         } else {
+            ctx.shadowColor = '#ffff00';
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.moveTo(0, -ent.radius);
+            ctx.lineTo(ent.radius, 0);
+            ctx.lineTo(0, ent.radius);
+            ctx.lineTo(-ent.radius, 0);
+            ctx.closePath();
+            ctx.fill();
+         }
+         ctx.restore();
+      });
+
+      // Draw Main Spidey Image
+      ctx.save();
+      ctx.translate(spidey.x, spidey.y);
+      ctx.rotate(spidey.rotation);
+
+      if (spidey.flip) {
+         ctx.scale(1, -1); 
+      }
+
+      let scaleX = 1;
+      let scaleY = 1;
+      if (spidey.state === 'swinging' && gameStateRef.current === 'PLAYING') {
+         const vel = Math.hypot(spidey.vx, spidey.vy);
+         const stretch = Math.min(vel * 0.015, 0.4); 
+         scaleX = 1 + stretch;
+         scaleY = 1 - stretch * 0.5;
+      }
+      ctx.scale(scaleX, scaleY);
+
+      if (spideyImg.complete && spideyImg.naturalHeight !== 0) {
+        ctx.drawImage(spideyImg, -spidey.width/2, -spidey.height/2, spidey.width, spidey.height);
+      } else {
+        ctx.fillStyle = '#ff00ff'; 
+        ctx.beginPath();
+        ctx.arc(0, 0, 30, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Dynamic Arm & Web
       if (web.active) {
+        let shoulderX = spidey.x + (spidey.flip ? -15 : 15);
+        let shoulderY = spidey.y - 15;
+        
+        let dx = web.anchorX - shoulderX;
+        let dy = web.anchorY - shoulderY;
+        let dist = Math.hypot(dx, dy);
+        let armLen = Math.min(dist * 0.4, 80); 
+        let nx = (dx / dist) * armLen;
+        let ny = (dy / dist) * armLen;
+        
+        let handX = shoulderX + nx;
+        let handY = shoulderY + ny;
+
+        // Draw Arm
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(shoulderX, shoulderY);
+        ctx.lineTo(handX, handY);
+        ctx.lineWidth = 14;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#000';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(shoulderX, shoulderY);
+        ctx.lineTo(handX, handY);
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#111'; // Black suit
+        ctx.stroke();
+
+        // Red Hand
+        ctx.beginPath();
+        ctx.arc(handX, handY, 9, 0, Math.PI*2);
+        ctx.fillStyle = '#e62429'; // Miles red
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000';
+        ctx.stroke();
+        ctx.restore();
+
+        // Draw Web connecting to hand!
+        ctx.save();
+        let cx = (web.anchorX + handX) / 2;
+        let cy = (web.anchorY + handY) / 2;
+        cx += Math.sin(Date.now() / 50) * web.wobble;
+        cy += Math.cos(Date.now() / 50) * web.wobble;
+
         ctx.beginPath();
         ctx.moveTo(web.anchorX, web.anchorY);
-        ctx.lineTo(spidey.x, spidey.y);
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 3;
+        ctx.quadraticCurveTo(cx, cy, handX, handY);
+        
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = web.visualThickness;
+        ctx.shadowColor = '#00ffff';
+        ctx.shadowBlur = 10;
         ctx.stroke();
         
         ctx.beginPath();
         ctx.arc(web.anchorX, web.anchorY, 6, 0, Math.PI*2);
         ctx.fillStyle = '#00ffff';
         ctx.fill();
+        ctx.restore();
       }
 
       particles.forEach(p => {
         ctx.globalAlpha = p.life;
         ctx.fillStyle = p.color;
         if (p.isSpeedLine) {
-           ctx.fillRect(p.x, p.y, 80, 2);
+           ctx.fillRect(p.x, p.y, 100, 3);
         } else {
            ctx.beginPath();
            ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
@@ -247,33 +438,6 @@ const SpiderManGame = ({ setScore }) => {
         }
       });
       ctx.globalAlpha = 1.0;
-
-      ctx.save();
-      ctx.translate(spidey.x, spidey.y);
-      
-      // Calculate visual rotation
-      if (spidey.state === 'swinging') {
-         // Rotate relative to web angle
-         ctx.rotate(-web.angle + Math.PI/2);
-      } else {
-         // Face trajectory
-         ctx.rotate(Math.atan2(spidey.vy, spidey.vx));
-      }
-
-      if (spideyImg.complete && spideyImg.naturalHeight !== 0) {
-        // We have the downloaded spiderman png
-        ctx.drawImage(spideyImg, -spidey.width/2, -spidey.height/2, spidey.width, spidey.height);
-      } else {
-        // Fallback drawing
-        ctx.fillStyle = '#ff00ff'; 
-        ctx.beginPath();
-        ctx.arc(0, 0, 30, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#00ffff'; 
-        ctx.fillRect(-15, -15, 30, 30);
-      }
-      
-      ctx.restore();
     };
 
     const loop = () => {
@@ -290,7 +454,7 @@ const SpiderManGame = ({ setScore }) => {
       canvas.removeEventListener('mouseup', handleUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [setScore]);
+  }, []); // EMPTY dependency array!
 
   return (
     <canvas 
