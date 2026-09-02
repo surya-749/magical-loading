@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@400;600&display=swap');
+
+:root {
+  --neon-cyan: #00ffff;
+  --neon-magenta: #ff00ff;
+  --neon-yellow: #ffff00;
+  --dark-bg: #0a0a0c;
+  --comic-font: 'Bangers', cursive;
+  --body-font: 'Inter', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--dark-bg);
+  color: white;
+  font-family: var(--body-font);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Halftone Pattern */
+.halftone-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, var(--neon-magenta) 1.5px, transparent 2px),
+              radial-gradient(circle, var(--neon-cyan) 1.5px, transparent 2px);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+  opacity: 0.15;
+  mix-blend-mode: screen;
+  z-index: 1;
+  pointer-events: none;
+  animation: halftoneShift 10s linear infinite;
+}
+
+@keyframes halftoneShift {
+  0% {
+    background-position: 0 0, 12px 12px;
+  }
+  100% {
+    background-position: 24px 24px, 36px 36px;
+  }
+}
+
+/* Glitch Effect */
+.glitch-wrapper {
+  position: relative;
+  font-family: var(--comic-font);
+  font-size: 4rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: white;
+  text-shadow: 3px 3px 0px var(--neon-magenta), -3px -3px 0px var(--neon-cyan);
+}
+
+.glitch-wrapper::before,
+.glitch-wrapper::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.glitch-wrapper::before {
+  left: 3px;
+  text-shadow: -3px 0 var(--neon-cyan);
+  clip: rect(24px, 550px, 90px, 0);
+  animation: glitch-anim 3s infinite linear alternate-reverse;
+}
+
+.glitch-wrapper::after {
+  left: -3px;
+  text-shadow: -3px 0 var(--neon-yellow);
+  clip: rect(85px, 550px, 140px, 0);
+  animation: glitch-anim 2.5s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim {
+  0% { clip: rect(10px, 9999px, 85px, 0); }
+  20% { clip: rect(32px, 9999px, 14px, 0); }
+  40% { clip: rect(87px, 9999px, 99px, 0); }
+  60% { clip: rect(4px, 9999px, 50px, 0); }
+  80% { clip: rect(62px, 9999px, 20px, 0); }
+  100% { clip: rect(20px, 9999px, 60px, 0); }
+}
+
+/* Comic Panel Container */
+.comic-panel {
+  border: 4px solid white;
+  box-shadow: 8px 8px 0px var(--neon-magenta);
+  background: rgba(10, 10, 12, 0.9);
+  padding: 2rem;
+  position: relative;
+}
+
+.comic-panel::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 100%;
+  height: 100%;
+  border: 4px solid var(--neon-cyan);
+  z-index: -1;
+  transform: translate(12px, 12px);
+}

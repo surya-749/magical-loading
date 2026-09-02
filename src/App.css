@@ -1,0 +1,53 @@
+.app-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #1a1a24 0%, var(--dark-bg) 100%);
+}
+
+.content-wrapper {
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 90%;
+  max-width: 900px;
+  gap: 4rem;
+}
+
+.header-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 1.5rem 3rem;
+}
+
+.header-panel h1 {
+  font-family: var(--comic-font);
+  font-size: 3rem;
+  letter-spacing: 2px;
+  color: var(--neon-yellow);
+  text-shadow: 2px 2px 0 #000, 5px 5px 0 var(--neon-magenta);
+  margin: 0;
+}
+
+.score-display {
+  font-family: var(--comic-font);
+  font-size: 2.5rem;
+  color: var(--neon-cyan);
+  text-shadow: 3px 3px 0 #000;
+}
+
+.main-display {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 250px;
+  text-align: center;
+}
