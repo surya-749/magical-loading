@@ -60,6 +60,8 @@ const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
     };
 
     let buildings = [];
+    let bgBuildings = [];
+    let fgBuildings = [];
     let particles = [];
     let entities = [];
     let distanceTraveled = 0;
@@ -68,16 +70,41 @@ const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
     const spideyImg = new Image();
     spideyImg.src = '/spiderman.png'; 
 
+    // Main interactive buildings
     const createBuilding = (xOffset = 0) => {
-      const width = Math.random() * 150 + 80;
-      const height = Math.random() * (canvas.height * 0.7) + 50;
-      const x = (buildings.length > 0 ? buildings[buildings.length - 1].x + buildings[buildings.length - 1].width + Math.random() * 100 : 0) + xOffset;
-      const hue = Math.random() > 0.5 ? 300 : 180; 
+      const width = Math.random() * 80 + 60;  // 60–140px wide
+      const height = canvas.height * 0.5 + Math.random() * canvas.height * 0.6;
+      const lastB = buildings[buildings.length - 1];
+      const gap = Math.random() * 120 + 60; // 60–180px gap between buildings
+      const x = lastB ? lastB.x + lastB.width + gap : xOffset;
+      const hue = [200, 260, 300, 180, 240][Math.floor(Math.random() * 5)];
       return { x, width, height, hue };
     };
 
-    for (let i = 0; i < 20; i++) {
+    // Background silhouettes
+    const createBgBuilding = (xOffset = 0) => {
+      const width = Math.random() * 120 + 60;
+      const height = canvas.height * 0.6 + Math.random() * canvas.height * 0.5;
+      const lastB = bgBuildings[bgBuildings.length - 1];
+      const gap = Math.random() * 70 + 30; // 30–100px gap
+      const x = lastB ? lastB.x + lastB.width + gap : xOffset;
+      return { x, width, height };
+    };
+
+    // Foreground blurry buildings
+    const createFgBuilding = (xOffset = 0) => {
+      const width = Math.random() * 250 + 150;
+      const height = Math.random() * (canvas.height * 0.4) + 50;
+      const x = (fgBuildings.length > 0 ? fgBuildings[fgBuildings.length - 1].x + fgBuildings[fgBuildings.length - 1].width + Math.random() * 400 + 300 : 0) + xOffset;
+      return { x, width, height };
+    };
+
+    for (let i = 0; i < 60; i++) {
       buildings.push(createBuilding(canvas.width));
+      bgBuildings.push(createBgBuilding(canvas.width));
+    }
+    for (let i = 0; i < 15; i++) {
+      fgBuildings.push(createFgBuilding(canvas.width));
     }
 
     const spawnParticle = (x, y, color, isSpeedLine = false, customVx = null, customVy = null) => {
@@ -114,9 +141,19 @@ const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
       const mouseX = e.clientX ? e.clientX - rect.left : e.touches[0].clientX - rect.left;
       const mouseY = e.clientY ? e.clientY - rect.top : e.touches[0].clientY - rect.top;
 
+      let hitBuilding = null;
+      for (let b of buildings) {
+         if (mouseX >= b.x && mouseX <= b.x + b.width) {
+            hitBuilding = b;
+            break;
+         }
+      }
+
+      if (!hitBuilding) return; // Missed the building!
+
       web.active = true;
       web.anchorX = mouseX;
-      web.anchorY = Math.min(mouseY, canvas.height * 0.3);
+      web.anchorY = canvas.height - hitBuilding.height; // Anchor to the top of the building
       
       const dx = spidey.x - web.anchorX;
       const dy = spidey.y - web.anchorY;
@@ -168,11 +205,14 @@ const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
       spidey.state = 'falling';
     };
 
+    let lastGameState = gameStateRef.current;
+
     const update = () => {
-      // If we just revived, reset position
-      if (gameStateRef.current === 'PLAYING' && spidey.y > canvas.height) {
+      // Check for revive transition
+      if (lastGameState === 'GAME_OVER' && gameStateRef.current === 'PLAYING') {
          resetGame();
       }
+      lastGameState = gameStateRef.current;
 
       if (gameStateRef.current !== 'PLAYING') return; // Pause updates if not playing
 
@@ -215,11 +255,19 @@ const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
       spidey.x = targetX; 
       if (web.active) web.anchorX -= xShift;
 
-      // Death condition
-      if (spidey.y > canvas.height + 150) {
+      // Death condition: Allow dipping if swinging, but die if too deep.
+      let isDead = false;
+      if (web.active) {
+         if (spidey.y > canvas.height + 600) isDead = true; // Way too deep
+      } else {
+         if (spidey.y > canvas.height + 50) isDead = true; // Normal falling death
+      }
+
+      if (isDead) {
          triggerGlitch();
          setScoreRef.current(prev => Math.max(0, prev - 100));
          if(onGameOverRef.current) onGameOverRef.current();
+         return; // Stop updating this frame
       }
 
       distanceTraveled += xShift > 0 ? xShift : 0;
@@ -227,10 +275,23 @@ const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
         setScoreRef.current(prev => prev + 10);
       }
 
-      buildings.forEach(b => b.x -= xShift * 0.8);
+      // Parallax updates
+      bgBuildings.forEach(b => b.x -= xShift * 0.3); // Slowest
+      bgBuildings = bgBuildings.filter(b => b.x + b.width > -500);
+      while (bgBuildings.length < 60) {
+        bgBuildings.push(createBgBuilding());
+      }
+
+      buildings.forEach(b => b.x -= xShift * 0.8); // Normal
       buildings = buildings.filter(b => b.x + b.width > -500);
-      while (buildings.length < 20) {
+      while (buildings.length < 60) {
         buildings.push(createBuilding());
+      }
+
+      fgBuildings.forEach(b => b.x -= xShift * 1.4); // Fastest
+      fgBuildings = fgBuildings.filter(b => b.x + b.width > -1000);
+      while (fgBuildings.length < 15) {
+        fgBuildings.push(createFgBuilding(canvas.width + Math.random() * 500));
       }
 
       let spawnedThisFrame = false;
@@ -282,162 +343,217 @@ const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.globalAlpha = 0.6;
-      buildings.forEach(b => {
-        const grd = ctx.createLinearGradient(0, canvas.height - b.height, 0, canvas.height);
-        grd.addColorStop(0, `hsl(${b.hue}, 100%, 40%)`);
-        grd.addColorStop(1, '#0a0a0c');
-        ctx.fillStyle = grd;
-        ctx.fillRect(b.x, canvas.height - b.height, b.width, b.height);
-        
-        ctx.fillStyle = `hsla(${b.hue}, 100%, 70%, 0.8)`;
-        for(let wy = canvas.height - b.height + 30; wy < canvas.height; wy += 40) {
-            for(let wx = b.x + 20; wx < b.x + b.width - 20; wx += 30) {
-                if (Math.random() > 0.4) ctx.fillRect(wx, wy, 8, 12);
-            }
+      // ── LAYER 0: Deep night sky gradient ──────────────────────────────
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      skyGrad.addColorStop(0,    '#0b0014');
+      skyGrad.addColorStop(0.55, '#110033');
+      skyGrad.addColorStop(1,    '#1a0045');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // ── LAYER 0.5: Stars (deterministic, no flicker) ─────────────────
+      for (let i = 0; i < 120; i++) {
+        const sx = (i * 137.5) % canvas.width;
+        const sy = (i * 97.3 + 13) % (canvas.height * 0.65);
+        const sr = (i % 3 === 0) ? 1.5 : 0.7;
+        ctx.globalAlpha = 0.3 + (i % 4) * 0.17;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1.0;
+
+      // ── LAYER 1: Far background silhouettes ───────────────────────────
+      bgBuildings.forEach(b => {
+        const h = b.height;
+        const y = canvas.height - h;
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = '#0d0028';
+        ctx.fillRect(b.x, y, b.width, h);
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#1e0055';
+        for (let wy = y + 15; wy < canvas.height - 10; wy += 18) {
+          for (let wx = b.x + 6; wx < b.x + b.width - 6; wx += 14) {
+            if ((wx + wy) % 3 !== 0) ctx.fillRect(wx, wy, 5, 7);
+          }
         }
       });
       ctx.globalAlpha = 1.0;
 
+      // ── LAYER 2: Mid buildings (interactive, web-anchor layer) ────────
+      buildings.forEach(b => {
+        const h = b.height;
+        const y = canvas.height - h;
+        const hue = b.hue;
+        const bodyGrad = ctx.createLinearGradient(b.x, y, b.x + b.width, y);
+        bodyGrad.addColorStop(0, `hsl(${hue}, 60%, 12%)`);
+        bodyGrad.addColorStop(1, `hsl(${hue + 30}, 80%, 16%)`);
+        ctx.fillStyle = bodyGrad;
+        ctx.globalAlpha = 0.95;
+        ctx.fillRect(b.x, y, b.width, h);
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = `hsl(${hue}, 100%, 55%)`;
+        ctx.fillRect(b.x, y, 2, h);
+        for (let row = y + 20; row < canvas.height - 15; row += 22) {
+          for (let col = b.x + 8; col < b.x + b.width - 8; col += 16) {
+            if ((col * 3 + row * 7) % 5 === 0) continue;
+            const wHue = (col + row) % 2 === 0 ? hue : hue + 60;
+            ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 1500 + col) * 0.2;
+            ctx.fillStyle = `hsl(${wHue}, 100%, 65%)`;
+            ctx.fillRect(col, row, 8, 10);
+          }
+        }
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = `hsl(${hue}, 100%, 70%)`;
+        ctx.fillRect(b.x + b.width / 2 - 1, y - 12, 2, 12);
+        ctx.beginPath();
+        ctx.arc(b.x + b.width / 2, y - 12, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#ff4466';
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1.0;
+
+      // ── LAYER 3: Entities (drones / tokens) ───────────────────────────
       entities.forEach(ent => {
-         ctx.save();
-         ctx.translate(ent.x, ent.y);
-         ctx.rotate(ent.rotation);
-         
-         if (ent.type === 'drone') {
-            ctx.shadowColor = '#ff0000';
-            ctx.shadowBlur = 15;
-            ctx.fillStyle = '#111';
-            ctx.fillRect(-ent.radius, -ent.radius, ent.radius*2, ent.radius*2);
-            ctx.strokeStyle = '#ff0000';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(-ent.radius, -ent.radius, ent.radius*2, ent.radius*2);
-            ctx.fillStyle = '#ff0000';
-            ctx.fillRect(-ent.radius*1.5, -3, ent.radius*3, 6);
-            ctx.fillRect(-3, -ent.radius*1.5, 6, ent.radius*3);
-         } else {
-            ctx.shadowColor = '#ffff00';
-            ctx.shadowBlur = 20;
-            ctx.fillStyle = '#ffff00';
-            ctx.beginPath();
-            ctx.moveTo(0, -ent.radius);
-            ctx.lineTo(ent.radius, 0);
-            ctx.lineTo(0, ent.radius);
-            ctx.lineTo(-ent.radius, 0);
-            ctx.closePath();
-            ctx.fill();
-         }
-         ctx.restore();
+        ctx.save();
+        ctx.translate(ent.x, ent.y);
+        ctx.rotate(ent.rotation);
+        if (ent.type === 'drone') {
+          ctx.shadowColor = '#ff0000';
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = '#1a0000';
+          ctx.fillRect(-ent.radius, -ent.radius, ent.radius * 2, ent.radius * 2);
+          ctx.strokeStyle = '#ff0000';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(-ent.radius, -ent.radius, ent.radius * 2, ent.radius * 2);
+          ctx.fillStyle = '#ff0000';
+          ctx.fillRect(-ent.radius * 1.5, -3, ent.radius * 3, 6);
+          ctx.fillRect(-3, -ent.radius * 1.5, 6, ent.radius * 3);
+        } else {
+          ctx.shadowColor = '#ffff00';
+          ctx.shadowBlur = 22;
+          ctx.fillStyle = '#ffff00';
+          ctx.beginPath();
+          ctx.moveTo(0, -ent.radius);
+          ctx.lineTo(ent.radius, 0);
+          ctx.lineTo(0, ent.radius);
+          ctx.lineTo(-ent.radius, 0);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
       });
 
-      // Draw Main Spidey Image
+      // ── LAYER 4: Spider-Man ───────────────────────────────────────────
       ctx.save();
       ctx.translate(spidey.x, spidey.y);
       ctx.rotate(spidey.rotation);
-
-      if (spidey.flip) {
-         ctx.scale(1, -1); 
-      }
-
-      let scaleX = 1;
-      let scaleY = 1;
-      if (spidey.state === 'swinging' && gameStateRef.current === 'PLAYING') {
-         const vel = Math.hypot(spidey.vx, spidey.vy);
-         const stretch = Math.min(vel * 0.015, 0.4); 
-         scaleX = 1 + stretch;
-         scaleY = 1 - stretch * 0.5;
+      if (spidey.flip) ctx.scale(1, -1);
+      let scaleX = 1, scaleY = 1;
+      if (spidey.state === 'swinging') {
+        const vel = Math.hypot(spidey.vx, spidey.vy);
+        const stretch = Math.min(vel * 0.015, 0.4);
+        scaleX = 1 + stretch;
+        scaleY = 1 - stretch * 0.5;
       }
       ctx.scale(scaleX, scaleY);
-
       if (spideyImg.complete && spideyImg.naturalHeight !== 0) {
-        ctx.drawImage(spideyImg, -spidey.width/2, -spidey.height/2, spidey.width, spidey.height);
+        ctx.drawImage(spideyImg, -spidey.width / 2, -spidey.height / 2, spidey.width, spidey.height);
       } else {
-        ctx.fillStyle = '#ff00ff'; 
+        ctx.fillStyle = '#e62429';
         ctx.beginPath();
         ctx.arc(0, 0, 30, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
 
-      // Dynamic Arm & Web
+      // ── LAYER 4.5: Dynamic Arm & Web ─────────────────────────────────
       if (web.active) {
-        let shoulderX = spidey.x + (spidey.flip ? -15 : 15);
-        let shoulderY = spidey.y - 15;
-        
-        let dx = web.anchorX - shoulderX;
-        let dy = web.anchorY - shoulderY;
-        let dist = Math.hypot(dx, dy);
-        let armLen = Math.min(dist * 0.4, 80); 
-        let nx = (dx / dist) * armLen;
-        let ny = (dy / dist) * armLen;
-        
-        let handX = shoulderX + nx;
-        let handY = shoulderY + ny;
-
-        // Draw Arm
+        const shoulderX = spidey.x + (spidey.flip ? -15 : 15);
+        const shoulderY = spidey.y - 15;
+        const adx = web.anchorX - shoulderX;
+        const ady = web.anchorY - shoulderY;
+        const adist = Math.hypot(adx, ady);
+        const armLen = Math.min(adist * 0.4, 80);
+        const handX = shoulderX + (adx / adist) * armLen;
+        const handY = shoulderY + (ady / adist) * armLen;
         ctx.save();
+        ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(shoulderX, shoulderY);
         ctx.lineTo(handX, handY);
         ctx.lineWidth = 14;
-        ctx.lineCap = 'round';
         ctx.strokeStyle = '#000';
         ctx.stroke();
-
         ctx.beginPath();
         ctx.moveTo(shoulderX, shoulderY);
         ctx.lineTo(handX, handY);
-        ctx.lineWidth = 10;
-        ctx.lineCap = 'round';
-        ctx.strokeStyle = '#111'; // Black suit
+        ctx.lineWidth = 9;
+        ctx.strokeStyle = '#1a1a1a';
         ctx.stroke();
-
-        // Red Hand
         ctx.beginPath();
-        ctx.arc(handX, handY, 9, 0, Math.PI*2);
-        ctx.fillStyle = '#e62429'; // Miles red
+        ctx.arc(handX, handY, 9, 0, Math.PI * 2);
+        ctx.fillStyle = '#e62429';
+        ctx.shadowColor = '#ff6688';
+        ctx.shadowBlur = 12;
         ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#000';
-        ctx.stroke();
         ctx.restore();
-
-        // Draw Web connecting to hand!
+        const cx = (web.anchorX + handX) / 2 + Math.sin(Date.now() / 50) * web.wobble;
+        const cy = (web.anchorY + handY) / 2 + Math.cos(Date.now() / 50) * web.wobble;
         ctx.save();
-        let cx = (web.anchorX + handX) / 2;
-        let cy = (web.anchorY + handY) / 2;
-        cx += Math.sin(Date.now() / 50) * web.wobble;
-        cy += Math.cos(Date.now() / 50) * web.wobble;
-
         ctx.beginPath();
         ctx.moveTo(web.anchorX, web.anchorY);
         ctx.quadraticCurveTo(cx, cy, handX, handY);
-        
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = web.visualThickness;
         ctx.shadowColor = '#00ffff';
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 12;
         ctx.stroke();
-        
         ctx.beginPath();
-        ctx.arc(web.anchorX, web.anchorY, 6, 0, Math.PI*2);
+        ctx.arc(web.anchorX, web.anchorY, 5, 0, Math.PI * 2);
         ctx.fillStyle = '#00ffff';
         ctx.fill();
         ctx.restore();
       }
 
+      // ── LAYER 5: Particles ────────────────────────────────────────────
       particles.forEach(p => {
         ctx.globalAlpha = p.life;
         ctx.fillStyle = p.color;
         if (p.isSpeedLine) {
-           ctx.fillRect(p.x, p.y, 100, 3);
+          ctx.fillRect(p.x, p.y, 100, 3);
         } else {
-           ctx.beginPath();
-           ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-           ctx.fill();
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+          ctx.fill();
         }
       });
       ctx.globalAlpha = 1.0;
+
+      // ── LAYER 6: Foreground buildings (darkest, in front of everything) ─
+      fgBuildings.forEach(b => {
+        const h = b.height;
+        const y = canvas.height - h;
+        const fgGrad = ctx.createLinearGradient(b.x, y, b.x + b.width, y);
+        fgGrad.addColorStop(0, '#060010');
+        fgGrad.addColorStop(1, '#090018');
+        ctx.fillStyle = fgGrad;
+        ctx.globalAlpha = 0.97;
+        ctx.fillRect(b.x, y, b.width, h);
+        ctx.fillStyle = '#2a006a';
+        ctx.globalAlpha = 0.4;
+        ctx.fillRect(b.x, y, 2, h);
+        ctx.fillRect(b.x + b.width - 2, y, 2, h);
+      });
+      ctx.globalAlpha = 1.0;
+
+      // ── Ground fog at the very bottom ─────────────────────────────────
+      const fogGrad = ctx.createLinearGradient(0, canvas.height - 60, 0, canvas.height);
+      fogGrad.addColorStop(0, 'rgba(30,0,80,0)');
+      fogGrad.addColorStop(1, 'rgba(10,0,30,0.9)');
+      ctx.fillStyle = fogGrad;
+      ctx.fillRect(0, canvas.height - 60, canvas.width, 60);
     };
 
     const loop = () => {
