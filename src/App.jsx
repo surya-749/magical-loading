@@ -75,24 +75,20 @@ function App() {
     return () => clearTimeout(timer);
   }, [gameState]);
 
-  // ── Phase 2: Video + Song start together ─────────────────────────────────
+  // ── Phase 2: Video starts and audio triggers when video begins rendering ─
   useEffect(() => {
     if (gameState !== 'VIDEO') return;
-
-    // Start soundtrack right when video phase begins
-    playAudio();
 
     const vid = videoRef.current;
     if (!vid) return;
 
     vid.currentTime = 0;
     vid.muted = true; // Keep video track muted so the mp3 soundtrack plays cleanly
-    const playPromise = vid.play();
-    if (playPromise !== undefined) {
-      playPromise.catch((e) => {
-        console.log('Video autoplay prevented:', e);
-      });
-    }
+
+    // Only start audio once the video actually begins rendering and playing
+    const handleVideoPlaying = () => {
+      playAudio();
+    };
 
     const handleEnded = () => {
       fadeOutAudio(800);
@@ -105,9 +101,19 @@ function App() {
       setGameState('PLAYING');
     };
 
+    vid.addEventListener('playing', handleVideoPlaying);
     vid.addEventListener('ended', handleEnded);
     vid.addEventListener('error', handleError);
+
+    const playPromise = vid.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((e) => {
+        console.log('Video autoplay prevented:', e);
+      });
+    }
+
     return () => {
+      vid.removeEventListener('playing', handleVideoPlaying);
       vid.removeEventListener('ended', handleEnded);
       vid.removeEventListener('error', handleError);
     };
