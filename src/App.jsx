@@ -134,16 +134,17 @@ function App() {
         <div className="overlay-center menu-ui futuristic-panel">
           <h1>READY TO SWING?</h1>
           <div className="instructions-card">
-             <h3>HOW TO PLAY</h3>
+             <h3>MISSION BRIEFING</h3>
              <ul>
-               <li><span className="key-hint">Click & Hold</span> to shoot a web and swing</li>
-               <li><span className="key-hint">Release</span> to detach and freefall</li>
-               <li><span className="key-hint">Avoid</span> the red security drones</li>
-               <li><span className="key-hint">Collect</span> yellow tokens for speed boosts</li>
+               <li><span className="key-hint">LEFT CLICK</span> to shoot a web and start swinging</li>
+               <li><span className="key-hint">TARGETS</span> Webs can <strong>ONLY</strong> be attached to buildings!</li>
+               <li><span className="key-hint">RELEASE</span> mouse button to detach and freefall</li>
+               <li><span className="key-hint">MISSION TIME</span> Play for the duration of website sync/loading!</li>
+               <li><span className="key-hint">AVOID</span> red security drones & stay out of the abyss</li>
              </ul>
           </div>
           <button className="play-button" onClick={handlePlayClick}>
-            PLAY THE GAME
+            ENTER SPIDER-VERSE
           </button>
         </div>
       )}

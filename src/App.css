@@ -1,3 +1,9 @@
+:root {
+  --comic-font: 'Impact', 'Trebuchet MS', 'Arial Black', sans-serif;
+  --neon-cyan: #00ffff;
+  --neon-magenta: #ff0044;
+}
+
 .app-container {
   width: 100vw;
   height: 100vh;

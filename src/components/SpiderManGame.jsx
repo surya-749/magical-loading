@@ -33,17 +33,17 @@ const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
     resize();
 
     // Game variables
-    const gravity = 0.4;
-    const maxVelocity = 35;
+    const gravity = 0.3;
+    const maxVelocity = 22;
 
     let spidey = {
-      x: canvas.width / 4,
-      y: canvas.height / 3,
-      vx: 15,
+      x: canvas.width * 0.2,
+      y: canvas.height * 0.4,
+      vx: 0,
       vy: 0,
       width: 100,
       height: 100,
-      state: 'falling',
+      state: 'idle', // Starts static on building rooftop
       flip: false,
       rotation: 0
     };
@@ -99,13 +99,32 @@ const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
       return { x, width, height };
     };
 
-    for (let i = 0; i < 60; i++) {
-      buildings.push(createBuilding(canvas.width));
-      bgBuildings.push(createBgBuilding(canvas.width));
-    }
-    for (let i = 0; i < 15; i++) {
-      fgBuildings.push(createFgBuilding(canvas.width));
-    }
+    // Setup first building right under spidey for static start
+    const initBuildings = () => {
+      buildings = [];
+      bgBuildings = [];
+      fgBuildings = [];
+
+      // First building directly underneath spidey's starting perch
+      const startB = {
+        x: canvas.width * 0.15,
+        width: 160,
+        height: canvas.height * 0.5,
+        hue: 240
+      };
+      buildings.push(startB);
+      spidey.x = startB.x + startB.width / 2;
+      spidey.y = canvas.height - startB.height - 40;
+
+      for (let i = 0; i < 60; i++) {
+        buildings.push(createBuilding(canvas.width * 0.2));
+        bgBuildings.push(createBgBuilding(canvas.width * 0.1));
+      }
+      for (let i = 0; i < 15; i++) {
+        fgBuildings.push(createFgBuilding(canvas.width * 0.2));
+      }
+    };
+    initBuildings();
 
     const spawnParticle = (x, y, color, isSpeedLine = false, customVx = null, customVy = null) => {
       particles.push({
@@ -176,7 +195,7 @@ const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
       if (web.active && gameStateRef.current === 'PLAYING') {
         web.active = false;
         spidey.state = 'falling';
-        const momentumBoost = 1.3;
+        const momentumBoost = 1.15;
         spidey.vx = web.length * web.angularVelocity * Math.cos(web.angle) * momentumBoost;
         spidey.vy = -web.length * web.angularVelocity * Math.sin(web.angle) * momentumBoost;
       }
@@ -198,11 +217,11 @@ const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
     };
 
     const resetGame = () => {
-      spidey.y = 100;
-      spidey.vy = 5;
-      spidey.vx = 15;
+      initBuildings();
+      spidey.vx = 0;
+      spidey.vy = 0;
       web.active = false;
-      spidey.state = 'falling';
+      spidey.state = 'idle';
     };
 
     let lastGameState = gameStateRef.current;
@@ -220,7 +239,13 @@ const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
       const targetX = canvas.width * 0.3;
       let xShift = 0;
 
-      if (spidey.state === 'swinging') {
+      if (spidey.state === 'idle') {
+        // Static start on rooftop before first web
+        spidey.vx = 0;
+        spidey.vy = 0;
+        spidey.rotation = 0;
+        xShift = 0;
+      } else if (spidey.state === 'swinging') {
         let angularAcceleration = (-gravity / web.length) * Math.sin(web.angle);
         web.angularVelocity += angularAcceleration;
         web.angle += web.angularVelocity;
@@ -554,6 +579,24 @@ const SpiderManGame = ({ setScore, gameState, onGameOver, onRevive }) => {
       fogGrad.addColorStop(1, 'rgba(10,0,30,0.9)');
       ctx.fillStyle = fogGrad;
       ctx.fillRect(0, canvas.height - 60, canvas.width, 60);
+
+      // ── Prompt Overlay when Idle ────────────────────────────────────
+      if (spidey.state === 'idle' && gameStateRef.current === 'PLAYING') {
+        const pulse = Math.sin(Date.now() / 200) * 0.25 + 0.75;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 26px var(--comic-font), sans-serif';
+        ctx.fillStyle = `rgba(0, 229, 255, ${pulse})`;
+        ctx.shadowColor = '#00ffff';
+        ctx.shadowBlur = 18;
+        ctx.fillText('LEFT-CLICK A BUILDING TO LAUNCH YOUR FIRST WEB!', canvas.width / 2, canvas.height * 0.25);
+        
+        ctx.font = 'bold 16px "Courier New", monospace';
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowBlur = 10;
+        ctx.fillText('(Webs can ONLY attach to buildings | Mini-game plays during sync)', canvas.width / 2, canvas.height * 0.30);
+        ctx.restore();
+      }
     };
 
     const loop = () => {
