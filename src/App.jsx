@@ -7,6 +7,7 @@ function App() {
   // Flow: 'WELCOME' (2s silent) -> 'VIDEO' (video + song) -> 'PLAYING' (game) -> 'DONE'
   const [gameState, setGameState] = useState('WELCOME');
   const [isGlitching, setIsGlitching] = useState(false);
+  const [audioBlocked, setAudioBlocked] = useState(false);
 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
@@ -19,18 +20,28 @@ function App() {
     audio.volume = 1;
     const promise = audio.play();
     if (promise !== undefined) {
-      promise.catch(() => {
-        // Autoplay policy fallback: unlock on first click or keypress
-        const unlock = () => {
-          if (audioRef.current) {
-            audioRef.current.play().catch(() => {});
-          }
-          window.removeEventListener('click', unlock);
-          window.removeEventListener('keydown', unlock);
-        };
-        window.addEventListener('click', unlock);
-        window.addEventListener('keydown', unlock);
-      });
+      promise
+        .then(() => {
+          setAudioBlocked(false);
+        })
+        .catch(() => {
+          // Autoplay policy: Browser requires user interaction to enable sound
+          setAudioBlocked(true);
+
+          const unlock = () => {
+            if (audioRef.current) {
+              audioRef.current.play().catch(() => {});
+            }
+            setAudioBlocked(false);
+            window.removeEventListener('click', unlock);
+            window.removeEventListener('keydown', unlock);
+            window.removeEventListener('touchstart', unlock);
+          };
+
+          window.addEventListener('click', unlock);
+          window.addEventListener('keydown', unlock);
+          window.addEventListener('touchstart', unlock);
+        });
     }
   }, []);
 
@@ -123,6 +134,13 @@ function App() {
         preload="auto"
         style={{ display: 'none' }}
       />
+
+      {/* ── Subtle prompt if browser blocked autoplay before user click ── */}
+      {audioBlocked && (gameState === 'VIDEO' || gameState === 'WELCOME') && (
+        <div className="audio-unlock-toast" onClick={playAudio}>
+          🎵 Tap anywhere to enable sound
+        </div>
+      )}
 
       {/* ── Phase 1: Cinematic WarpText "WELCOME" for 2 seconds ── */}
       {gameState === 'WELCOME' && (

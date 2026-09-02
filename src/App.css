@@ -214,4 +214,29 @@
   100% { transform: translate(10px, -10px); }
 }
 
+.audio-unlock-toast {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 99;
+  background: rgba(10, 10, 15, 0.85);
+  border: 2px solid var(--neon-cyan);
+  color: #fff;
+  font-family: var(--comic-font);
+  font-size: 1rem;
+  letter-spacing: 1.5px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+  animation: pulseAudioToast 1.5s infinite alternate;
+  backdrop-filter: blur(8px);
+}
+
+@keyframes pulseAudioToast {
+  0% { transform: scale(1); box-shadow: 0 0 15px rgba(0, 255, 255, 0.4); }
+  100% { transform: scale(1.05); box-shadow: 0 0 25px var(--neon-magenta); border-color: var(--neon-magenta); }
+}
+
+
 
