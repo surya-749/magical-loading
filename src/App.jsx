@@ -17,7 +17,6 @@ function App() {
   useEffect(() => {
     if (gameState === 'INTRO' && videoRef.current) {
       const vid = videoRef.current;
-      vid.currentTime = 50; // Start at 50s
       vid.muted = true;
       
       const playPromise = vid.play();
@@ -25,18 +24,24 @@ function App() {
         playPromise.catch(e => console.log("Autoplay prevented:", e));
       }
 
-      const handleTimeUpdate = () => {
-        if (vid.currentTime >= 50 && !videoPlaying) {
+      const handlePlayStart = () => {
+        if (!videoPlaying) {
            setVideoPlaying(true);
-        }
-        if (vid.currentTime >= 55) {
-          vid.pause();
-          setGameState('MENU');
         }
       };
       
-      vid.addEventListener('timeupdate', handleTimeUpdate);
-      return () => vid.removeEventListener('timeupdate', handleTimeUpdate);
+      const handleEnded = () => {
+        if (videoPlaying) {
+           setGameState('MENU');
+        }
+      };
+      
+      vid.addEventListener('playing', handlePlayStart);
+      vid.addEventListener('ended', handleEnded);
+      return () => {
+         vid.removeEventListener('playing', handlePlayStart);
+         vid.removeEventListener('ended', handleEnded);
+      }
     }
   }, [gameState, videoPlaying]);
 
@@ -94,7 +99,7 @@ function App() {
       {(gameState === 'INTRO' || gameState === 'MENU') && (
         <video 
           ref={videoRef}
-          src="/trailer_1080p.mp4" 
+          src="/cropped-miles.mp4" 
           className="video-bg"
           autoPlay 
           muted 
