@@ -152,44 +152,26 @@ function App() {
         />
       )}
 
-      {/* Cinematic Intro Layer: Black background with WarpText */}
-      <div 
-        className="intro-layer" 
-        style={{ 
-          opacity: (gameState === 'INTRO' && !videoPlaying) ? 1 : 0,
-          pointerEvents: (gameState === 'INTRO' && !videoPlaying) ? 'auto' : 'none'
-        }}
-      >
-         {(gameState === 'INTRO' && !videoPlaying) && (
-            <WarpText
-              text="WELCOME"
-              color="#ff0044"
-              warpStrength={0.1}
-              warpScale={2.0}
-              speed={0.6}
-              fontSize="clamp(4rem, 15vw, 12rem)"
-              fontWeight={800}
-              style={{ width: '100%', height: '400px' }}
-            />
-         )}
-      </div>
+      {/* ── Phase 3: Spider-Verse interactive game ── */}
+      {gameState === 'PLAYING' && (
+        <SpiderVerseLoader onComplete={handleLoaderComplete} />
+      )}
 
-      {/* Menu Overlay */}
-      {gameState === 'MENU' && (
-        <div className="overlay-center menu-ui futuristic-panel">
-          <h1>READY TO SWING?</h1>
-          <div className="instructions-card">
-             <h3>MISSION BRIEFING</h3>
-             <ul>
-               <li><span className="key-hint">LEFT CLICK</span> to shoot a web and start swinging</li>
-               <li><span className="key-hint">TARGETS</span> Webs can <strong>ONLY</strong> be attached to buildings!</li>
-               <li><span className="key-hint">RELEASE</span> mouse button to detach and freefall</li>
-               <li><span className="key-hint">MISSION TIME</span> Play for the duration of website sync/loading!</li>
-               <li><span className="key-hint">AVOID</span> red security drones & stay out of the abyss</li>
-             </ul>
-          </div>
-          <button className="play-button" onClick={handlePlayClick}>
-            ENTER SPIDER-VERSE
+      {/* ── Phase 4: Post-game done screen ── */}
+      {gameState === 'DONE' && (
+        <div className="overlay-center futuristic-panel done-screen">
+          <h1 className="glitch-text" data-text="WELCOME TO THE SPIDER-VERSE">
+            WELCOME TO THE SPIDER-VERSE
+          </h1>
+          <p style={{ color: '#aaa', fontFamily: 'var(--body-font)', marginTop: '1rem' }}>
+            Your website is now fully loaded.
+          </p>
+          <button
+            className="play-button"
+            style={{ marginTop: '2rem', fontSize: '1.8rem' }}
+            onClick={() => setGameState('PLAYING')}
+          >
+            PLAY AGAIN
           </button>
         </div>
       )}
