@@ -55,40 +55,44 @@
 }
 
 .futuristic-panel {
-  background: rgba(10, 10, 12, 0.85);
-  backdrop-filter: blur(10px);
+  background: rgba(10, 10, 12, 0.88);
+  backdrop-filter: blur(12px);
   border: 2px solid rgba(255, 0, 68, 0.5);
   border-radius: 12px;
   box-shadow: 0 0 30px rgba(255, 0, 68, 0.2), inset 0 0 20px rgba(0, 255, 255, 0.1);
-  padding: 3rem;
-  max-width: 600px;
+  padding: clamp(1.2rem, 3vh, 2.2rem) clamp(1rem, 3vw, 2rem);
+  width: min(92vw, 520px);
+  max-height: 88vh;
+  overflow-y: auto;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .futuristic-panel h1 {
   font-family: var(--comic-font);
-  font-size: 4.5rem;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
   color: white;
   text-shadow: 3px 3px 0 var(--neon-cyan), -3px -3px 0 var(--neon-magenta);
-  margin-bottom: 2rem;
+  margin-bottom: clamp(0.8rem, 2vh, 1.5rem);
   letter-spacing: 2px;
+  line-height: 1.1;
 }
 
 .instructions-card {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(0, 255, 255, 0.3);
-  padding: 1.5rem;
-  margin-bottom: 2.5rem;
+  padding: clamp(0.8rem, 2vh, 1.2rem);
+  margin-bottom: clamp(1rem, 2.5vh, 1.8rem);
   text-align: left;
 }
 
 .instructions-card h3 {
   color: var(--neon-cyan);
   font-family: var(--comic-font);
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
+  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+  margin-bottom: 0.6rem;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
 }
 
 .instructions-card ul {
@@ -100,9 +104,9 @@
 .instructions-card li {
   color: #ddd;
   font-family: 'Courier New', Courier, monospace;
-  font-size: 1.1rem;
-  margin-bottom: 0.8rem;
-  line-height: 1.4;
+  font-size: clamp(0.8rem, 1.6vw, 0.95rem);
+  margin-bottom: 0.5rem;
+  line-height: 1.35;
 }
 
 .key-hint {
@@ -111,7 +115,7 @@
   background: var(--neon-magenta);
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
-  font-size: 0.9em;
+  font-size: 0.85em;
   text-shadow: none;
   display: inline-block;
   margin-right: 5px;
@@ -120,12 +124,12 @@
 .play-button {
   background: transparent;
   border: 3px solid var(--neon-cyan);
-  padding: 1rem 3rem;
+  padding: clamp(0.5rem, 1.5vh, 0.8rem) clamp(1.5rem, 3vw, 2.5rem);
   cursor: pointer;
-  box-shadow: 6px 6px 0 var(--neon-magenta);
+  box-shadow: 4px 4px 0 var(--neon-magenta);
   transition: all 0.2s;
   font-family: var(--comic-font);
-  font-size: 2.5rem;
+  font-size: clamp(1.4rem, 3.5vw, 2rem);
   color: white;
   text-shadow: 2px 2px 0 var(--neon-cyan);
   text-transform: uppercase;
