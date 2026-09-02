@@ -6,7 +6,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at center, #1a1a24 0%, var(--dark-bg) 100%);
+  background: transparent; /* Changed to transparent so Canvas is visible */
 }
 
 .content-wrapper {
@@ -17,6 +17,11 @@
   width: 90%;
   max-width: 900px;
   gap: 4rem;
+  pointer-events: none; /* Let pointer events pass through to canvas */
+}
+
+.content-wrapper > * {
+  pointer-events: auto; /* UI elements can still be interacted with if needed */
 }
 
 .header-panel {
@@ -25,6 +30,8 @@
   align-items: center;
   width: 100%;
   padding: 1.5rem 3rem;
+  background: rgba(10, 10, 12, 0.7); /* Slightly more transparent */
+  backdrop-filter: blur(4px);
 }
 
 .header-panel h1 {
@@ -50,4 +57,34 @@
   justify-content: center;
   min-height: 250px;
   text-align: center;
+}
+
+.halftone-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, var(--neon-magenta) 1.5px, transparent 2px),
+              radial-gradient(circle, var(--neon-cyan) 1.5px, transparent 2px);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+  opacity: 0.15;
+  mix-blend-mode: screen;
+  z-index: 5; /* Between canvas (1) and UI (10) */
+  pointer-events: none;
+  animation: halftoneShift 10s linear infinite;
+}
+
+.severe-glitch {
+  animation: severeGlitchAnim 0.1s infinite;
+  filter: hue-rotate(90deg) contrast(200%) saturate(300%) invert(20%);
+}
+
+@keyframes severeGlitchAnim {
+  0% { transform: translate(10px, -10px); }
+  25% { transform: translate(-10px, 10px); }
+  50% { transform: translate(10px, 10px); }
+  75% { transform: translate(-10px, -10px); }
+  100% { transform: translate(10px, -10px); }
 }

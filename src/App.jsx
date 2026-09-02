@@ -1,18 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import HalftoneBackground from './components/HalftoneBackground';
+import React, { useState, useEffect, useCallback } from 'react';
 import ProgressBar from './components/ProgressBar';
 import GlitchMessage from './components/GlitchMessage';
-import MiniGame from './components/MiniGame';
+import SpiderManGame from './components/SpiderManGame';
 import './App.css';
 
 function App() {
   const [progress, setProgress] = useState(0);
   const [score, setScore] = useState(0);
+  const [isGlitching, setIsGlitching] = useState(false);
 
   useEffect(() => {
-    // Exactly 60 seconds = 60000ms
     const totalTime = 60000;
-    const intervalTime = 50; // Update every 50ms for smooth visual
+    const intervalTime = 50; 
     
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -28,13 +27,14 @@ function App() {
   }, []);
 
   return (
-    <div className="app-container">
-      <HalftoneBackground />
+    <div className={`app-container`}>
+      {/* Halftone overlay on top of the 2D scene but below some UI */}
+      <div className="halftone-overlay"></div>
       
       <div className="content-wrapper">
         <div className="comic-panel header-panel">
-          <h1>Multiverse Sync</h1>
-          <div className="score-display">Score: {score}</div>
+          <h1>Spider-Verse Sync</h1>
+          <div className="score-display">Distance: {Math.floor(score)}m</div>
         </div>
 
         <div className="main-display">
@@ -50,7 +50,9 @@ function App() {
         <ProgressBar progress={progress} />
       </div>
 
-      {progress < 100 && <MiniGame setScore={setScore} />}
+      {progress < 100 && (
+        <SpiderManGame setScore={setScore} />
+      )}
     </div>
   );
 }
