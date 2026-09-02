@@ -122,9 +122,9 @@ function App() {
               warpStrength={0.1}
               warpScale={2.0}
               speed={0.6}
-              fontSize="clamp(4rem, 15vw, 12rem)"
+              fontSize="clamp(3rem, 10vw, 7rem)"
               fontWeight={800}
-              style={{ width: '100%', height: '400px' }}
+              style={{ width: '100%', height: '300px' }}
             />
          )}
       </div>
